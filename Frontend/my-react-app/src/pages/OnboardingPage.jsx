@@ -3,12 +3,17 @@ import { motion } from 'framer-motion';
 import { Briefcase, User, Rocket, CheckCircle, ArrowRight, Layers } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './Onboarding.css';
+import { auth } from "../firebase";
+import { onAuthStateChanged } from "firebase/auth";
+
 
 const OnboardingPage = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [role, setRole] = useState(null); // 'Admin' or 'Member'
-    const [userName, setUserName] = useState('User');
+    const [userName, setUserName] = useState("");
+
+    
 
     // Admin Fields
     const [position, setPosition] = useState('');
@@ -21,11 +26,12 @@ const OnboardingPage = () => {
 
     useEffect(() => {
         // Retrieve name from temp storage
-        const storedUser = localStorage.getItem('tn_user_temp');
-        if (storedUser) {
-            const parsed = JSON.parse(storedUser);
-            setUserName(parsed.name || 'User');
-        }
+        const unsub = onAuthStateChanged(auth,(user)=>{
+            if (user){
+                setUserName(user.displayName || "User");
+            }
+        });
+        return ()=>unsub();
     }, []);
 
     const handleRoleSelect = (selectedRole) => {

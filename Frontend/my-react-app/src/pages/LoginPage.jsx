@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './Auth.css';
-import { auth, googleProvider } from "../firebase";
+import { auth, googleProvider, githubProvider } from "../firebase";
 import {
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -25,27 +25,30 @@ const LoginPage = () => {
     const [showPassword, setShowPassword] = useState(false);
 
     const handleSocialLogin = async (provider) => {
-    if (provider !== "Google") {
-        alert(`${provider} login coming soon`);
-        return;
-    }
-
     try {
-        const result = await signInWithPopup(auth, googleProvider);
+        let authProvider;
+
+        if (provider === "Google") {
+            authProvider = googleProvider;
+        } else if (provider === "GitHub") {
+            authProvider = githubProvider;
+        } else {
+            alert("LinkedIn handled separately");
+            return;
+        }
+
+        const result = await signInWithPopup(auth, authProvider);
 
         const token = await result.user.getIdToken();
 
-        // 🔗 Send token to backend (NON-BLOCKING)
+        // non-blocking backend verify
         fetch("http://localhost:5000/api/auth/verify", {
             method: "POST",
             headers: {
                 Authorization: `Bearer ${token}`,
             },
-        }).catch((err) => {
-            console.error("Backend verify failed:", err);
-        });
+        }).catch(() => {});
 
-        // ✅ ALWAYS NAVIGATE
         navigate("/onboarding");
     } catch (error) {
         alert(error.message);
