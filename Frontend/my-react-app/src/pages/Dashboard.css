@@ -651,6 +651,34 @@ body {
     color: #000;
 }
 
+/* No Tasks Placeholder */
+.no-tasks-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+}
+
+.no-tasks-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #94A3B8;
+}
+
+.no-task-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: #64748B;
+    margin-top: 16px;
+    margin-bottom: 4px;
+}
+
+.no-task-sub {
+    font-size: 14px;
+    color: #94A3B8;
+}
+
 /* Scrollbar styling for sidebar */
 .sidebar::-webkit-scrollbar {
     width: 6px;
