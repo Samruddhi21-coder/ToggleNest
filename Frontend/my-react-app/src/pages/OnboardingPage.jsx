@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Briefcase, User, Rocket, CheckCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Briefcase, User, Rocket, CheckCircle, ArrowRight, Layers } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import './Auth.css';
+import './Onboarding.css';
 
 const OnboardingPage = () => {
     const navigate = useNavigate();
@@ -30,11 +30,11 @@ const OnboardingPage = () => {
 
     const handleRoleSelect = (selectedRole) => {
         setRole(selectedRole);
-        setStep(2);
+        // Add a slight delay for visual confirmation before transition
+        setTimeout(() => setStep(2), 200);
     };
 
     const handleComplete = () => {
-        // Here you would make the API call to update the user profile
         console.log('Onboarding Complete', {
             role,
             position,
@@ -43,217 +43,242 @@ const OnboardingPage = () => {
             projectName,
             jobFunction
         });
-
-        // Redirect to Dashboard
         navigate('/dashboard');
     };
 
-    return (
-        <div className="onboarding-container">
-            {/* Left Side: Form Area */}
-            <div className="onboarding-left">
+    // Animation Variants
+    const slideUp = {
+        hidden: { opacity: 0, y: 20 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+    };
 
-                {/* Progress Bar */}
-                <div className="progress-bar-container">
-                    <div
-                        className="progress-bar-fill"
-                        style={{ width: step === 1 ? '33%' : step === 2 ? '66%' : '100%' }}
-                    ></div>
+    return (
+        <div className="ob-page-wrapper">
+            <div className="ob-container">
+
+                {/* Left Side: Interaction */}
+                <div className="ob-left">
+                    {/* Minimalist Step Indicator */}
+                    <div className="ob-step-indicator">
+                        {[1, 2, 3].map((s) => (
+                            <div
+                                key={s}
+                                className={`ob-step-dot ${step >= s ? 'active' : ''}`}
+                            />
+                        ))}
+                    </div>
+
+                    <div style={{ maxWidth: '480px', width: '100%', zIndex: 10 }}>
+                        <motion.div
+                            key={step}
+                            initial="hidden"
+                            animate="visible"
+                            variants={slideUp}
+                        >
+                            {/* STEP 1: ROLE SELECTION */}
+                            {step === 1 && (
+                                <>
+                                    <div className="ob-header">
+                                        <h1 className="ob-title">First, define your role.</h1>
+                                        <p className="ob-subtitle">Select the option that best describes you.</p>
+                                    </div>
+
+                                    <div className="ob-role-grid">
+                                        <div
+                                            className={`ob-role-card ${role === 'Admin' ? 'active' : ''}`}
+                                            onClick={() => handleRoleSelect('Admin')}
+                                        >
+                                            <Briefcase className="ob-role-icon" size={32} />
+                                            <h3 className="ob-role-title">Admin / Owner</h3>
+                                            <p className="ob-role-desc">I'm setting up a new workspace.</p>
+                                        </div>
+
+                                        <div
+                                            className={`ob-role-card ${role === 'Member' ? 'active' : ''}`}
+                                            onClick={() => handleRoleSelect('Member')}
+                                        >
+                                            <User className="ob-role-icon" size={32} />
+                                            <h3 className="ob-role-title">Team Member</h3>
+                                            <p className="ob-role-desc">I'm joining an existing project.</p>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* STEP 2: DETAILS FORM */}
+                            {step === 2 && (
+                                <>
+                                    <div className="ob-header">
+                                        <h1 className="ob-title">
+                                            {role === 'Admin' ? 'Setup your Workspace' : 'Join your Project'}
+                                        </h1>
+                                        <p className="ob-subtitle">Let's get the details right.</p>
+                                    </div>
+
+                                    <form className="ob-form" onSubmit={(e) => e.preventDefault()}>
+                                        {/* ADMIN FLOW */}
+                                        {role === 'Admin' && (
+                                            <>
+                                                <div>
+                                                    <label className="ob-label">Your Position</label>
+                                                    <div className="ob-input-group">
+                                                        <select
+                                                            className="ob-input ob-select"
+                                                            value={position}
+                                                            onChange={(e) => setPosition(e.target.value)}
+                                                        >
+                                                            <option value="" disabled>Select option...</option>
+                                                            <option value="Project Manager">Project Manager</option>
+                                                            <option value="CEO">CEO / Founder</option>
+                                                            <option value="Tech Lead">Tech Lead</option>
+                                                            <option value="Operations">Operations</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <label className="ob-label">Team Name</label>
+                                                    <div className="ob-input-group">
+                                                        <Layers className="ob-icon" size={18} />
+                                                        <input
+                                                            type="text"
+                                                            className="ob-input"
+                                                            placeholder="Workspace Name"
+                                                            value={teamName}
+                                                            onChange={(e) => setTeamName(e.target.value)}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <label className="ob-label">Team Size</label>
+                                                    <div className="ob-pill-group">
+                                                        {['1-5', '6-20', '21-50', '50+'].map((size) => (
+                                                            <div
+                                                                key={size}
+                                                                className={`ob-pill ${teamSize === size ? 'active' : ''}`}
+                                                                onClick={() => setTeamSize(size)}
+                                                            >
+                                                                {size}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {/* MEMBER FLOW */}
+                                        {role === 'Member' && (
+                                            <>
+                                                <div>
+                                                    <label className="ob-label">Project Name</label>
+                                                    <div className="ob-input-group">
+                                                        <Briefcase className="ob-icon" size={18} />
+                                                        <input
+                                                            type="text"
+                                                            className="ob-input"
+                                                            placeholder="Project Name"
+                                                            value={projectName}
+                                                            onChange={(e) => setProjectName(e.target.value)}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <label className="ob-label">Your Role</label>
+                                                    <div className="ob-input-group">
+                                                        <User className="ob-icon" size={18} />
+                                                        <input
+                                                            type="text"
+                                                            className="ob-input"
+                                                            placeholder="e.g. Designer, Developer"
+                                                            value={jobFunction}
+                                                            onChange={(e) => setJobFunction(e.target.value)}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+
+                                        <div style={{ marginTop: '32px', display: 'flex', gap: '16px', alignItems: 'center' }}>
+                                            <button
+                                                type="button"
+                                                className="ob-btn-primary"
+                                                onClick={handleComplete}
+                                            >
+                                                Launch Workspace
+                                                <ArrowRight size={18} />
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                className="ob-btn-ghost"
+                                                onClick={() => setStep(1)}
+                                            >
+                                                Back
+                                            </button>
+                                        </div>
+                                    </form>
+                                </>
+                            )}
+                        </motion.div>
+                    </div>
                 </div>
 
-                <motion.div
-                    key={step}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ duration: 0.3 }}
-                >
-                    {/* Step 1: Role Selection */}
-                    {step === 1 && (
-                        <div>
-                            <h2 className="auth-header" style={{ marginBottom: '30px' }}>
-                                <span style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a' }}>First, define your role.</span>
-                            </h2>
+                {/* Right Side: Identity & Ghost UI */}
+                <div className="ob-right">
 
-                            <div className="role-cards">
-                                <div
-                                    className={`role-card ${role === 'Admin' ? 'active' : ''}`}
-                                    onClick={() => handleRoleSelect('Admin')}
-                                >
-                                    <Briefcase className="role-icon" size={32} />
-                                    <h3 className="role-title">I am an Admin / Owner</h3>
-                                    <p style={{ fontSize: '13px', color: '#64748b', marginTop: '8px' }}>
-                                        I'm setting up a new workspace for my team.
-                                    </p>
-                                </div>
-
-                                <div
-                                    className={`role-card ${role === 'Member' ? 'active' : ''}`}
-                                    onClick={() => handleRoleSelect('Member')}
-                                >
-                                    <User className="role-icon" size={32} />
-                                    <h3 className="role-title">I am a Team Member</h3>
-                                    <p style={{ fontSize: '13px', color: '#64748b', marginTop: '8px' }}>
-                                        I'm joining an existing project or team.
-                                    </p>
-                                </div>
-                            </div>
+                    {/* Ghost Kanban Board Background */}
+                    <div className="ob-ghost-board">
+                        <div className="ob-ghost-column">
+                            <div className="ob-ghost-col-header"></div>
+                            <div className="ob-ghost-card h-24"></div>
+                            <div className="ob-ghost-card h-32"></div>
+                            <div className="ob-ghost-card h-20"></div>
                         </div>
-                    )}
-
-                    {/* Step 2: Details Flow */}
-                    {step === 2 && (
-                        <div>
-                            <h2 className="auth-header" style={{ marginBottom: '30px' }}>
-                                <span style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a' }}>
-                                    {role === 'Admin' ? 'Setup your Workspace' : 'Join your Project'}
-                                </span>
-                            </h2>
-
-                            <form className="auth-form">
-                                {/* ADMIN FLOW */}
-                                {role === 'Admin' && (
-                                    <>
-                                        <div>
-                                            <label className="step-label">Your Position</label>
-                                            <div className="auth-input-group">
-                                                <select
-                                                    className="auth-input"
-                                                    style={{ paddingLeft: '16px' }}
-                                                    value={position}
-                                                    onChange={(e) => setPosition(e.target.value)}
-                                                >
-                                                    <option value="" disabled>Select your role...</option>
-                                                    <option value="Project Manager">Project Manager</option>
-                                                    <option value="CEO">CEO / Founder</option>
-                                                    <option value="Tech Lead">Tech Lead</option>
-                                                    <option value="Operations">Operations Head</option>
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="step-label">Team Name</label>
-                                            <div className="auth-input-group">
-                                                <Rocket className="auth-icon" size={20} />
-                                                <input
-                                                    type="text"
-                                                    className="auth-input"
-                                                    placeholder="Decide your Team Name"
-                                                    value={teamName}
-                                                    onChange={(e) => setTeamName(e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="step-label">Team Size</label>
-                                            <div className="pill-group">
-                                                {['1-5', '6-20', '21-50', '50+'].map((size) => (
-                                                    <div
-                                                        key={size}
-                                                        className={`pill-selector ${teamSize === size ? 'active' : ''}`}
-                                                        onClick={() => setTeamSize(size)}
-                                                    >
-                                                        {size}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-
-                                {/* MEMBER FLOW */}
-                                {role === 'Member' && (
-                                    <>
-                                        <div>
-                                            <label className="step-label">Project Name</label>
-                                            <div className="auth-input-group">
-                                                <Briefcase className="auth-icon" size={20} />
-                                                <input
-                                                    type="text"
-                                                    className="auth-input"
-                                                    placeholder="Which project are you joining?"
-                                                    value={projectName}
-                                                    onChange={(e) => setProjectName(e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="step-label">Add me in my role in the team</label>
-                                            <div className="auth-input-group">
-                                                <User className="auth-icon" size={20} />
-                                                <input
-                                                    type="text"
-                                                    className="auth-input"
-                                                    placeholder="e.g. UI Designer, Backend Dev"
-                                                    value={jobFunction}
-                                                    onChange={(e) => setJobFunction(e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Disabled/Locked Fields for Context */}
-                                        <div style={{ opacity: 0.5, pointerEvents: 'none' }}>
-                                            <label className="step-label">Team Name (Locked)</label>
-                                            <div className="auth-input-group">
-                                                <input type="text" className="auth-input" value="Locked for Members" readOnly />
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-
-                                <button
-                                    type="button"
-                                    className="auth-btn-primary"
-                                    onClick={handleComplete}
-                                    style={{ marginTop: '20px' }}
-                                >
-                                    Launch My Workspace
-                                </button>
-
-                                <button
-                                    type="button"
-                                    className="tn-btn-ghost"
-                                    onClick={() => setStep(1)}
-                                    style={{ marginTop: '10px', fontSize: '14px' }}
-                                >
-                                    Cancel & Go Back
-                                </button>
-                            </form>
+                        <div className="ob-ghost-column mt-12">
+                            <div className="ob-ghost-col-header"></div>
+                            <div className="ob-ghost-card h-28"></div>
+                            <div className="ob-ghost-card h-24"></div>
                         </div>
-                    )}
-                </motion.div>
-            </div>
-
-            {/* Right Side: Welcome Message (Azure Blue) */}
-            <div className="onboarding-right">
-                <motion.div
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                >
-                    <h1 style={{ fontSize: '42px', fontWeight: '800', marginBottom: '20px', lineHeight: '1.2' }}>
-                        Welcome to ToggleNest, <br /> {userName}! 👋
-                    </h1>
-                    <p style={{ fontSize: '18px', opacity: 0.9, lineHeight: '1.6' }}>
-                        Let's configure your workspace for maximum productivity.
-                        {role === 'Admin' ? ' As an admin, you have full control over the team setup.' : ' Join your team and start collaborating instantly.'}
-                    </p>
-
-                    <div style={{ marginTop: '60px', display: 'flex', gap: '15px', flexDirection: 'column' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <CheckCircle size={20} /> <span>Real-time collaboration</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <CheckCircle size={20} /> <span>Smart Kanban boards</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <CheckCircle size={20} /> <span>Automated workflows</span>
+                        <div className="ob-ghost-column mt-8">
+                            <div className="ob-ghost-col-header"></div>
+                            <div className="ob-ghost-card h-40"></div>
+                            <div className="ob-ghost-card h-20"></div>
                         </div>
                     </div>
-                </motion.div>
+
+                    <div className="ob-welcome-content">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.3 }}
+                        >
+                            <h1 className="ob-welcome-title">
+                                Welcome, <br /> {userName}.
+                            </h1>
+                            <p className="ob-welcome-text">
+                                You're moments away from clarity. ToggleNest is designed to help you focus on what truly matters.
+                            </p>
+
+                            <div className="ob-feature-list">
+                                <div className="ob-feature-item">
+                                    <CheckCircle size={20} className="ob-feature-icon" />
+                                    <span>Workspace Customization</span>
+                                </div>
+                                <div className="ob-feature-item">
+                                    <CheckCircle size={20} className="ob-feature-icon" />
+                                    <span>Real-time Sync</span>
+                                </div>
+                                <div className="ob-feature-item">
+                                    <CheckCircle size={20} className="ob-feature-icon" />
+                                    <span>Automated Workflows</span>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                </div>
+
             </div>
         </div>
     );
