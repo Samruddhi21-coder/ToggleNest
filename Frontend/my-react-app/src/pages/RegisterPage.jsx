@@ -24,7 +24,6 @@ const RegisterPage = () => {
     e.preventDefault();
 
     try {
-        // 🔐 Create Firebase user
         const userCredential = await createUserWithEmailAndPassword(
             auth,
             formData.email,
@@ -35,19 +34,14 @@ const RegisterPage = () => {
         await updateProfile(userCredential.user, {
             displayName: formData.name,
         });
-
-        // 🔑 Get Firebase ID token
         const token = await userCredential.user.getIdToken();
 
-        // 🔗 Send token to backend (non-blocking)
         fetch("http://localhost:5000/api/auth/verify", {
             method: "POST",
             headers: {
                 Authorization: `Bearer ${token}`,
             },
         }).catch(() => {});
-
-        // ✅ Navigate to onboarding
         navigate("/onboarding");
     } catch (error) {
         alert(error.message);
