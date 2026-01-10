@@ -46,7 +46,7 @@ const LandingPage = () => {
             The collaborative workspace that nests your team's tasks and progress in one beautiful, intuitive interface.
           </p>
           <button className="tn-btn-large" onClick={() => navigate('/register')}>
-            Get Started for Free
+            Get Started
             <ArrowRight size={18} />
           </button>
         </div>
