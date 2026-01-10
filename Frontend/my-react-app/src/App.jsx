@@ -6,6 +6,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import Dashboard from "./pages/Dashboard";
+import AdminDashboard from "./pages/Admin_Dashboard";
 import ViewProfile from "./pages/Profile";
 
 export default function App() {
