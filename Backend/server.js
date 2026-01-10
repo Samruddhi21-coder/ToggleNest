@@ -175,7 +175,55 @@ app.get("/api/dashboard/:email", async (req, res) => {
   }
 });
 
-// 5.team member contact
+// 5. Query Schema & Routes
+const QuerySchema = new mongoose.Schema({
+  projectId: { type: String, required: true },
+  text: { type: String, required: true },
+  senderEmail: { type: String },
+  isResolved: { type: Boolean, default: false }
+}, { timestamps: true });
+
+const Query = mongoose.model("Query", QuerySchema);
+
+// Add New Query
+app.post("/api/queries", async (req, res) => {
+  try {
+    const { projectId, text, senderEmail } = req.body;
+    const newQuery = new Query({ projectId, text, senderEmail });
+    await newQuery.save();
+    res.status(201).json(newQuery);
+  } catch (error) {
+    res.status(500).json({ message: "Error saving query" });
+  }
+});
+
+// Get Queries for Project
+app.get("/api/queries/:projectId", async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const queries = await Query.find({ projectId }).sort({ createdAt: 1 });
+    res.status(200).json(queries);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching queries" });
+  }
+});
+
+// Resolve/Unresolve Query
+app.patch("/api/queries/:id/resolve", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const query = await Query.findById(id);
+    if (!query) return res.status(404).json({ message: "Query not found" });
+
+    query.isResolved = !query.isResolved;
+    await query.save();
+    res.status(200).json(query);
+  } catch (error) {
+    res.status(500).json({ message: "Error updating query" });
+  }
+});
+
+// 6. team member contact
 app.get("/api/team/:projectId", async (req, res) => {
   try {
     const { projectId } = req.params;

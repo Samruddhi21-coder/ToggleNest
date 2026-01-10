@@ -119,7 +119,26 @@ const Dashboard = () => {
     );
   };
 
-  const handleAddQuery = () => {
+
+  // ------------------- QUERIES LOGIC -------------------
+  // Fetch Queries
+  useEffect(() => {
+    const fetchQueries = async () => {
+      const storedUser = JSON.parse(localStorage.getItem('user'));
+      if (storedUser?.projectId) {
+        try {
+          const res = await axios.get(`http://localhost:5000/api/queries/${storedUser.projectId}`);
+          setQueries(res.data);
+        } catch (error) {
+          console.error("Error fetching queries", error);
+        }
+      }
+    };
+    fetchQueries();
+  }, [teamMembers]); // Re-fetch when team members load or strictly on mount if stable
+
+  // Add Query
+  const handleAddQuery = async () => {
     if (!newQuery.trim()) return;
     setQueries((q) => [
       ...q,
