@@ -21,6 +21,14 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   /* ---------------- STATE ---------------- */
+  const [showTaskModal, setShowTaskModal] = useState(false);
+
+const [newTask, setNewTask] = useState({
+  name: "",
+  description: "",
+  assignedTo: "",
+});
+
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
@@ -44,6 +52,24 @@ const Dashboard = () => {
     "Activity Log",
     "Notifications",
   ];
+const handleCreateTask = () => {
+  if (!newTask.name || !newTask.assignedTo) return;
+
+  const task = {
+    id: Date.now(),
+    name: newTask.name,
+    description: newTask.description,
+    assignedTo: newTask.assignedTo,
+    status: "To-Do",
+    completed: false,
+    deadline: "—",
+  };
+
+  setTasks((prev) => [task, ...prev]);
+
+  setNewTask({ name: "", description: "", assignedTo: "" });
+  setShowTaskModal(false);
+};
 
   /* ---------------- AUTH & DATA ---------------- */
 
@@ -168,6 +194,7 @@ const Dashboard = () => {
 
   /* ================= RENDER ================= */
   return (
+    
     <div className="dashboard-container">
       {isSyncing && (
         <div className="sync-overlay">
@@ -291,10 +318,12 @@ const Dashboard = () => {
               <ArrowLeft size={16} /> Back
             </button>
 
-            <button className="btn-add-query">
-              <Plus size={16} /> Add Query
+            <button
+             className="btn-add-query"
+            onClick={() => setShowTaskModal(true)}
+            >
+            <Plus size={16} /> Add Task
             </button>
-
             <div className="relative">
               <div
                 className="user-profile-badge"
@@ -348,44 +377,23 @@ const Dashboard = () => {
               </div>
 
               {filteredTasks.length ? (
-                <div className="task-list">
+                <div className="task-grid">
                   {filteredTasks.map((task) => (
-                    <div key={task.id} className="task-card">
-                      <div className="task-left">
-                        <div
-                          className={`toggle-complete ${
-                            task.completed ? "completed" : ""
-                          }`}
-                          onClick={() => toggleTaskCompletion(task.id)}
-                        >
-                          <Check size={14} />
-                        </div>
-                        <span
-                          className={`task-name ${
-                            task.completed ? "completed" : ""
-                          }`}
-                        >
-                          {task.name}
-                        </span>
-                      </div>
+                    <div key={task.id} className="task-tile">
+  <h3>{task.name}</h3>
+  <p className="task-desc">{task.description}</p>
 
-                      <div className="task-right">
-                        <div className="task-meta">
-                          <Clock size={14} />
-                          <span>{task.deadline}</span>
-                        </div>
-                        <div
-                          className={`status-badge ${task.status
-                            ?.toLowerCase()
-                            .replace(" ", "")}`}
-                        >
-                          {task.status}
-                        </div>
-                        <button className="btn-more">
-                          <MoreHorizontal size={20} />
-                        </button>
-                      </div>
-                    </div>
+  <div className="task-footer">
+    <span className="assigned-to">
+      👤 {task.assignedTo}
+    </span>
+
+    <span className={`status-badge ${task.status.toLowerCase()}`}>
+      {task.status}
+    </span>
+  </div>
+</div>
+
                   ))}
                 </div>
               ) : (
@@ -401,6 +409,58 @@ const Dashboard = () => {
           )}
         </div>
       </main>
+      {showTaskModal && (
+  <div className="modal-overlay">
+    <motion.div
+      className="task-modal"
+      initial={{ scale: 0.9, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <h2>Create New Task</h2>
+
+      <input
+        type="text"
+        placeholder="Task Name"
+        value={newTask.name}
+        onChange={(e) =>
+          setNewTask({ ...newTask, name: e.target.value })
+        }
+      />
+
+      <textarea
+        placeholder="Task Description"
+        value={newTask.description}
+        onChange={(e) =>
+          setNewTask({ ...newTask, description: e.target.value })
+        }
+      />
+
+      <input
+        type="text"
+        placeholder="Assigned To"
+        value={newTask.assignedTo}
+        onChange={(e) =>
+          setNewTask({ ...newTask, assignedTo: e.target.value })
+        }
+      />
+
+      <div className="modal-actions">
+        <button
+          className="btn-cancel"
+          onClick={() => setShowTaskModal(false)}
+        >
+          Cancel
+        </button>
+
+        <button className="btn-save" onClick={handleCreateTask}>
+          Create Task
+        </button>
+      </div>
+    </motion.div>
+  </div>
+)}
+
     </div>
   );
 };
