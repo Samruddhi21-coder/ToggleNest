@@ -1,97 +1,133 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Briefcase, User, Rocket, CheckCircle, ArrowRight, Layers, Hash, Lock } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import toast, { Toaster } from 'react-hot-toast';
-import './Onboarding.css';
-import { auth } from "../firebase";
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { Briefcase, User, CheckCircle, ArrowRight, Layers, Hash, Lock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import toast, { Toaster } from "react-hot-toast";
+
 import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { auth, db } from "../firebase";
+
+import "./Onboarding.css";
 
 const OnboardingPage = () => {
-    const navigate = useNavigate();
-    const [step, setStep] = useState(1);
-    const [role, setRole] = useState(null); // 'Admin' or 'Member'
-    const [userName, setUserName] = useState("");
-    const [userEmail, setUserEmail] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
-    // Common Field
-    const [projectId, setProjectId] = useState('');
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-    // Admin Fields
-    const [position, setPosition] = useState('');
-    const [teamName, setTeamName] = useState('');
-    const [teamSize, setTeamSize] = useState('');
+  const [step, setStep] = useState(1);
+  const [role, setRole] = useState(null);
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
 
-    // Member Fields
-    const [projectName, setProjectName] = useState('');
-    const [jobFunction, setJobFunction] = useState('');
+  // Form fields
+  const [projectId, setProjectId] = useState("");
+  const [position, setPosition] = useState("");
+  const [teamName, setTeamName] = useState("");
+  const [teamSize, setTeamSize] = useState("");
+  const [projectName, setProjectName] = useState("");
+  const [jobFunction, setJobFunction] = useState("");
 
-    useEffect(() => {
-        // Retrieve name from auth
-        const unsub = onAuthStateChanged(auth, (user) => {
-            if (user) {
-                setUserName(user.displayName || "User");
-                setUserEmail(user.email);
-            }
-        });
-        return () => unsub();
-    }, []);
+  const [isLoading, setIsLoading] = useState(false);
 
-    const handleRoleSelect = (selectedRole) => {
-        setRole(selectedRole);
-        setTimeout(() => setStep(2), 200);
+  // -----------------------------
+  // 1️⃣ Auth Listener + Check Onboarding
+  // -----------------------------
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
+
+        // Check if onboarding is already completed
+        const docRef = doc(db, "users", firebaseUser.uid);
+        const snap = await getDoc(docRef);
+        const data = snap.exists() ? snap.data() : null;
+
+        if (data?.onboardingCompleted) {
+          navigate("/dashboard"); // Returning user → dashboard
+        } else {
+          setUserName(firebaseUser.displayName || "User");
+          setUserEmail(firebaseUser.email);
+        }
+      } else {
+        navigate("/"); // Not logged in → landing page
+      }
+      setLoading(false);
+    });
+
+    return () => unsub();
+  }, [navigate]);
+
+  // -----------------------------
+  // 2️⃣ Handle Role Selection
+  // -----------------------------
+  const handleRoleSelect = (selectedRole) => {
+    setRole(selectedRole);
+    setTimeout(() => setStep(2), 200);
+  };
+
+  // -----------------------------
+  // 3️⃣ Finish Onboarding & Navigate
+  // -----------------------------
+  const handleLaunch = async () => {
+    if (!projectId) {
+      toast.error("Please enter a Project ID.");
+      return;
+    }
+
+    setIsLoading(true);
+    const loadingToast = toast.loading("Validating Project ID...");
+
+    const onboardingData = {
+      email: userEmail,
+      role,
+      projectId,
+      position: role === "Admin" ? position : undefined,
+      teamName: role === "Admin" ? teamName : undefined,
+      teamSize: role === "Admin" ? teamSize : undefined,
+      projectName: role === "Member" ? projectName : undefined,
+      jobFunction: role === "Member" ? jobFunction : undefined,
     };
 
-    const handleLaunch = async () => {
-        if (!projectId) {
-            toast.error("Please enter a Project ID.");
-            return;
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/api/onboarding",
+        onboardingData
+      );
+
+      if (response.status === 200) {
+        toast.success("Workspace created! Redirecting...", { id: loadingToast });
+
+        // Mark onboarding as completed in Firestore
+        if (user) {
+          const docRef = doc(db, "users", user.uid);
+          await updateDoc(docRef, { onboardingCompleted: true });
         }
 
-        setIsLoading(true);
-        const loadingToast = toast.loading("Validating Project ID...");
+        // Navigate to dashboard
+        navigate("/dashboard");
+      }
+    } catch (error) {
+      console.error("Onboarding Failed:", error);
+      const errMsg =
+        error.response?.data?.message || "Connection error: Nest not found";
+      toast.error(errMsg, { id: loadingToast });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-        const onboardingData = {
-            email: userEmail,
-            role,
-            projectId, // Common field
-            position: role === 'Admin' ? position : undefined,
-            teamName: role === 'Admin' ? teamName : undefined,
-            teamSize: role === 'Admin' ? teamSize : undefined,
-            projectName: role === 'Member' ? projectName : undefined,
-            jobFunction: role === 'Member' ? jobFunction : undefined,
-        };
+  // -----------------------------
+  // 4️⃣ Animation Variants
+  // -----------------------------
+  const slideUp = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+  };
 
-        try {
-            const response = await axios.post('http://localhost:5000/api/onboarding', onboardingData);
-
-            if (response.status === 200) {
-                toast.success("Nest Found! Welcome aboard.", { id: loadingToast });
-
-                const updatedUser = response.data.user;
-                localStorage.setItem('user_metadata', JSON.stringify(updatedUser));
-
-                setTimeout(() => {
-                    navigate('/dashboard');
-                }, 800);
-            }
-        } catch (error) {
-            console.error("Onboarding Failed:", error);
-            // Show specific error message from backend
-            const errMsg = error.response?.data?.message || "Connection error: Nest not found";
-            toast.error(errMsg, { id: loadingToast });
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    // Animation Variants
-    const slideUp = {
-        hidden: { opacity: 0, y: 20 },
-        visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
-    };
+  if (loading) return <p>Loading...</p>;
 
     return (
         <div className="ob-page-wrapper">

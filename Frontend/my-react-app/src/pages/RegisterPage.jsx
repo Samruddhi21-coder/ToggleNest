@@ -6,6 +6,20 @@ import './Auth.css';
 import reg from "/image/reg.jpg"
 import { auth } from "../firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+
+import { db } from "../firebase";
+
+const registerUser = async (email, password, name) => {
+  const res = await createUserWithEmailAndPassword(auth, email, password);
+
+  await setDoc(doc(db, "users", res.user.uid), {
+    name,
+    email,
+    onboardingCompleted: false,
+    createdAt: new Date(),
+  });
+};
 
 const RegisterPage = () => {
     const navigate = useNavigate();
