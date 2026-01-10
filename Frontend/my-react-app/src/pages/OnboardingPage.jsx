@@ -74,8 +74,13 @@ const OnboardingPage = () => {
                 localStorage.setItem('user_metadata', JSON.stringify(updatedUser));
 
                 setTimeout(() => {
-                    navigate('/dashboard');
-                }, 800);
+                    if (role === 'Admin') {
+                      navigate('/admin/dashboard');
+                    } else {
+                      navigate('/dashboard');
+                    }
+                  }, 800);
+                  
             }
         } catch (error) {
             console.error("Onboarding Failed:", error);
