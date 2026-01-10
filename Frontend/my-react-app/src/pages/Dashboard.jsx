@@ -12,8 +12,23 @@ import {
   Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from "react-router-dom";
+import { getAuth, signOut } from "firebase/auth";
+
 
 const Dashboard = () => {
+  const auth = getAuth();
+const navigate = useNavigate();
+
+const handleLogout = async () => {
+  try {
+    await signOut(auth);
+    navigate("/"); // landing page
+  } catch (error) {
+    console.error("Logout error:", error);
+  }
+};
+  const [showDropdown, setShowDropdown] = useState(false);
   // Mock Auth State (Replace with real AuthContext later)
   // Logic: If a user is logged in, pull their name from the auth state.
   const user = {
@@ -226,10 +241,49 @@ const Dashboard = () => {
 
             {/* User Profile Avatar */}
             {user.isLoggedIn && (
-              <div className="user-profile-badge">
-                {user.name.charAt(0)}
-              </div>
-            )}
+  <div className="relative">
+    <div
+      className="user-profile-badge"
+      onClick={() => setShowDropdown((prev) => !prev)}
+    >
+      {user.name.charAt(0)}
+    </div>
+
+    {showDropdown && (
+      <div className="profile-dropdown-container">
+        <button
+          className="profile-dropdown-item"
+          onClick={() => {
+            navigate("/profile");
+            setShowDropdown(false);
+          }}
+        >
+          View Profile
+        </button>
+
+        <button
+          className="profile-dropdown-item"
+          onClick={() => {
+            navigate("/settings");
+            setShowDropdown(false);
+          }}
+        >
+          Settings
+        </button>
+
+        <button
+          className="profile-dropdown-item logout"
+          onClick={handleLogout}
+        >
+          Logout
+        </button>
+      </div>
+    )}
+  </div>
+)}
+
+
+
           </div>
         </header>
 

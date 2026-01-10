@@ -4,8 +4,7 @@ import RegisterPage from "./pages/RegisterPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
-
-
+import ViewProfile from "./pages/Profile";
 export default function App() {
   return (
     <Routes>
@@ -14,6 +13,7 @@ export default function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/onboarding" element={<OnboardingPage />} />
       <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/profile" element={<ViewProfile/>}/>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
