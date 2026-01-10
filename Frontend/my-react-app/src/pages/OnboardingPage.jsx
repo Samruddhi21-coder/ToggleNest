@@ -49,7 +49,7 @@ const OnboardingPage = () => {
             projectName,
             jobFunction
         });
-        navigate('/dashboard');
+        navigate('/Dashboard');
     };
 
     // Animation Variants
