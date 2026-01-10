@@ -1,26 +1,36 @@
-import React, { useState, useEffect } from 'react';
-import './Dashboard.css';
-import axios from 'axios';
+import React, { useEffect, useState } from "react";
+import "./Dashboard.css";
+import axios from "axios";
 import {
-  Layers, Plus, Check, Briefcase, User, ArrowLeft, Clock, MoreHorizontal, Search
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+  Layers,
+  Plus,
+  Check,
+  Briefcase,
+  User,
+  ArrowLeft,
+  Clock,
+  MoreHorizontal,
+  Search,
+} from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { signOut, onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "../firebase";
 
 const Dashboard = () => {
   const navigate = useNavigate();
 
-  // ------------------- STATE -------------------
-  const [dashboardData, setDashboardData] = useState(null);
+  /* ---------------- STATE ---------------- */
+  const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
+  const [dashboardData, setDashboardData] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [queries, setQueries] = useState([
     { id: 1, text: "Clarify timeline for Week 2", solved: false },
-    { id: 2, text: "Budget approval status?", solved: true }
+    { id: 2, text: "Budget approval status?", solved: true },
   ]);
+
   const [newQuery, setNewQuery] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("Task Board");
@@ -35,99 +45,119 @@ const Dashboard = () => {
     "Notifications",
   ];
 
-  // ------------------- AUTH -------------------
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        navigate("/"); // redirect to landing
-      } else {
-        setCurrentUser(user);
+  /* ---------------- AUTH & DATA ---------------- */
 
-        // Fetch dashboard data
-        try {
-          const res = await fetch(`http://localhost:5000/api/dashboard/${user.email}`);
-          if (res.ok) {
-            const data = await res.json();
-            setDashboardData(data);
-            setTasks(data.tasks || []);
-          } else {
-            console.error("Dashboard fetch failed", res.status);
-            setDashboardData({ activeProjectName: "Default Project", history: [], tasks: [] });
-            setTasks([]);
-          }
-        } catch (err) {
-          console.error(err);
-          setDashboardData({ activeProjectName: "Default Project", history: [], tasks: [] });
-          setTasks([]);
-        }
+    useEffect(() => {
+  const unsub = onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      navigate("/");
+      return;
+    }
 
-        // Fetch team members
-        const storedUser = JSON.parse(localStorage.getItem('user'));
-        if (storedUser?.projectId) {
-          try {
-            const res = await axios.get(`http://localhost:5000/api/team/${storedUser.projectId}`);
-            setTeamMembers(res.data.teamMembers || []);
-          } catch (err) {
-            console.error("Failed to fetch team members", err);
-          }
-        }
+    setCurrentUser(user);
+
+    try {
+      const encodedEmail = encodeURIComponent(user.email);
+
+      const res = await fetch(
+        `http://localhost:5000/api/dashboard/${encodedEmail}`
+      );
+
+      if (!res.ok) {
+        throw new Error("Dashboard API failed");
       }
-    });
 
-    return () => unsubscribe();
-  }, [navigate]);
+      const dashboard = await res.json(); // ✅ renamed from `data`
 
-  // ------------------- FUNCTIONS -------------------
+      setDashboardData(dashboard);
+      setTasks(dashboard.tasks || []);
+
+      const stored = JSON.parse(localStorage.getItem("user"));
+      if (stored?.projectId) {
+        const teamRes = await axios.get(
+          `http://localhost:5000/api/team/${stored.projectId}`
+        );
+        setTeamMembers(teamRes.data.teamMembers || []);
+      }
+    } catch (err) {
+      console.error("Dashboard load failed:", err);
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  return () => unsub();
+}, [navigate]);
+
+
+  /* ---------------- EFFECTS ---------------- */
+  useEffect(() => {
+    if (activeTab === "Task Board" || activeTab === "Activity Log") {
+      setIsSyncing(true);
+      const t = setTimeout(() => setIsSyncing(false), 500);
+      return () => clearTimeout(t);
+    }
+  }, [activeTab]);
+
+  /* ---------------- HANDLERS ---------------- */
   const handleLogout = async () => {
     await signOut(auth);
     navigate("/");
   };
 
   const toggleTaskCompletion = (id) => {
-    setTasks(prev =>
-      prev.map(t =>
-        t.id === id ? { ...t, completed: !t.completed, status: !t.completed ? "Done" : "In Progress" } : t
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              completed: !t.completed,
+              status: !t.completed ? "Done" : "In Progress",
+            }
+          : t
       )
     );
   };
 
   const handleAddQuery = () => {
     if (!newQuery.trim()) return;
-    const query = { id: Date.now(), text: newQuery, solved: false };
-    setQueries(prev => [...prev, query]);
+    setQueries((q) => [
+      ...q,
+      { id: Date.now(), text: newQuery, solved: false },
+    ]);
     setNewQuery("");
   };
 
   const handleResolveQuery = (id) => {
-    setQueries(prev => prev.map(q => q.id === id ? { ...q, solved: !q.solved } : q));
+    setQueries((q) =>
+      q.map((x) => (x.id === id ? { ...x, solved: !x.solved } : x))
+    );
   };
 
-  useEffect(() => {
-    if (activeTab === "Task Board" || activeTab === "Activity Log") {
-      setIsSyncing(true);
-      const timer = setTimeout(() => setIsSyncing(false), 500);
-      return () => clearTimeout(timer);
-    }
-  }, [activeTab]);
-
-  const filteredTasks = tasks.filter(t =>
-    t.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredTasks = tasks.filter((t) =>
+    t.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (!currentUser) return null; // prevent UI flash
-
+  if (loading) {
   return (
-    <div className="dashboard-container relative">
+    <div style={{ height: "100vh", display: "grid", placeItems: "center" }}>
+      Loading Dashboard...
+    </div>
+  );
+}
+
+
+  /* ================= RENDER ================= */
+  return (
+    <div className="dashboard-container">
       {isSyncing && (
-        <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="animate-pulse flex flex-col items-center">
-            <Layers className="animate-spin mb-2" size={32} color="#000" />
-            <span className="text-black font-medium">Syncing...</span>
-          </div>
+        <div className="sync-overlay">
+          <Layers className="spin" />
+          <span>Syncing...</span>
         </div>
       )}
 
-      {/* Sidebar */}
+      {/* SIDEBAR */}
       <aside className="sidebar">
         <div className="logo-section">
           <Layers className="logo-icon" />
@@ -144,80 +174,211 @@ const Dashboard = () => {
           />
         </div>
 
-        <div className="team-contacts-section">
-          <h4 className="sidebar-heading">Team Contacts</h4>
-          {teamMembers.map(member => (
-            <div key={member.email} className="contact-item">
-              <div className="avatar-circle">{member.fullName?.charAt(0).toUpperCase()}</div>
+        <span className="section-title">TEAM CONTACTS</span>
+        <div className="contacts-list">
+          {teamMembers.map((m) => (
+            <div key={m.email} className="contact-item">
+              <div className="avatar-circle">
+                {m.fullName?.charAt(0)}
+              </div>
               <div className="contact-info">
-                <p className="contact-name">{member.fullName} {member.email === currentUser.email && "(Me)"}</p>
-                <p className="contact-email">{member.email}</p>
+                <h4>
+                  {m.fullName}
+                  {m.email === currentUser.email && (
+                    <span className="me-badge"> (Me)</span>
+                  )}
+                </h4>
+                <p>{m.email}</p>
               </div>
             </div>
           ))}
         </div>
+
+        <span className="section-title">PROJECTS</span>
+        <div className="projects-menu">
+          <div className="project-item active">
+            <div className="project-left">
+              <Briefcase size={16} />
+              <span className="project-name">
+                {dashboardData?.activeProjectName || "Project"}
+              </span>
+            </div>
+            <div className="indicator" />
+          </div>
+        </div>
+
+        <div className="query-section">
+          <span className="section-title">TASKS & QUERIES</span>
+
+          <div className="query-input-wrapper">
+            <input
+              className="query-input"
+              placeholder="Drop a Query..."
+              value={newQuery}
+              onChange={(e) => setNewQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAddQuery()}
+            />
+            <button className="add-query-btn-small" onClick={handleAddQuery}>
+              <Plus size={16} />
+            </button>
+          </div>
+
+          <div className="queries-list">
+            <AnimatePresence>
+              {queries.map((q) => (
+                <motion.div
+                  key={q.id}
+                  className="query-item"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <div
+                    className={`query-check ${q.solved ? "solved" : ""}`}
+                    onClick={() => handleResolveQuery(q.id)}
+                  >
+                    {q.solved && <Check size={10} />}
+                  </div>
+                  <span className={`query-text ${q.solved ? "solved" : ""}`}>
+                    {q.text}
+                  </span>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        <div className="core-team-section">
+          <span className="section-title">CORE TEAM</span>
+          <div className="team-avatars">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="team-avatar">
+                <User size={14} />
+              </div>
+            ))}
+          </div>
+        </div>
       </aside>
 
-      {/* Main Content */}
+      {/* MAIN */}
       <main className="main-content">
         <header className="main-header">
-          <h1>{dashboardData?.activeProjectName || "Dashboard"}</h1>
+          <div className="project-title">
+            <h1>{dashboardData?.activeProjectName || "Dashboard"}</h1>
+          </div>
+
           <div className="header-actions">
-            <button onClick={() => navigate("/")}><ArrowLeft size={16} /> Back</button>
+            <button className="btn-back" onClick={() => navigate("/")}>
+              <ArrowLeft size={16} /> Back
+            </button>
+
+            <button className="btn-add-query">
+              <Plus size={16} /> Add Query
+            </button>
+
             <div className="relative">
-              <div className="user-profile-badge" onClick={() => setShowDropdown(prev => !prev)}>
+              <div
+                className="user-profile-badge"
+                onClick={() => setShowDropdown(!showDropdown)}
+              >
                 {currentUser.email.charAt(0).toUpperCase()}
               </div>
+
               {showDropdown && (
                 <div className="profile-dropdown-container">
-                  <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100">{currentUser.email}</div>
-                  <button className="profile-dropdown-item" onClick={() => { navigate("/profile"); setShowDropdown(false); }}>View Profile</button>
-                  <button className="profile-dropdown-item" onClick={() => { navigate("/settings"); setShowDropdown(false); }}>Settings</button>
-                  <button className="profile-dropdown-item logout" onClick={handleLogout}>Logout</button>
+                  <button
+                    className="profile-dropdown-item"
+                    onClick={() => navigate("/profile")}
+                  >
+                    View Profile
+                  </button>
+                  <button
+                    className="profile-dropdown-item logout"
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </button>
                 </div>
               )}
             </div>
           </div>
         </header>
 
-        {/* Tabs */}
         <div className="tabs-container">
-          {tabs.map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)} className={`tab-btn ${activeTab === tab ? 'active' : ''}`}>
-              {tab}
-            </button>
-          ))}
+          <div className="tabs-list">
+            {tabs.map((t) => (
+              <button
+                key={t}
+                className={`tab-btn ${activeTab === t ? "active" : ""}`}
+                onClick={() => setActiveTab(t)}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Task Board */}
         <div className="dashboard-body">
-          {activeTab === "Task Board" ? (
-            filteredTasks.length > 0 ? (
-              filteredTasks.map(task => (
-                <div key={task.id} className="task-card">
-                  <div className="task-left">
-                    <div className={`toggle-complete ${task.completed ? 'completed' : ''}`} onClick={() => toggleTaskCompletion(task.id)}>
-                      <Check size={14} />
+          {activeTab === "Task Board" && (
+            <>
+              <div className="task-section-header">
+                <h2>Active Tasks</h2>
+                <span className="task-count">
+                  {filteredTasks.length} tasks
+                </span>
+              </div>
+
+              {filteredTasks.length ? (
+                <div className="task-list">
+                  {filteredTasks.map((task) => (
+                    <div key={task.id} className="task-card">
+                      <div className="task-left">
+                        <div
+                          className={`toggle-complete ${
+                            task.completed ? "completed" : ""
+                          }`}
+                          onClick={() => toggleTaskCompletion(task.id)}
+                        >
+                          <Check size={14} />
+                        </div>
+                        <span
+                          className={`task-name ${
+                            task.completed ? "completed" : ""
+                          }`}
+                        >
+                          {task.name}
+                        </span>
+                      </div>
+
+                      <div className="task-right">
+                        <div className="task-meta">
+                          <Clock size={14} />
+                          <span>{task.deadline}</span>
+                        </div>
+                        <div
+                          className={`status-badge ${task.status
+                            ?.toLowerCase()
+                            .replace(" ", "")}`}
+                        >
+                          {task.status}
+                        </div>
+                        <button className="btn-more">
+                          <MoreHorizontal size={20} />
+                        </button>
+                      </div>
                     </div>
-                    <span className={`task-name ${task.completed ? 'completed' : ''}`}>{task.name}</span>
-                  </div>
-                  <div className="task-right">
-                    <div className="task-meta"><Clock size={14} /><span>{task.deadline}</span></div>
-                    <div className={`status-badge ${task.status.toLowerCase().replace(' ', '')}`}>{task.status}</div>
-                    <button className="btn-more"><MoreHorizontal size={20} /></button>
+                  ))}
+                </div>
+              ) : (
+                <div className="no-tasks-wrapper">
+                  <div className="no-tasks-placeholder">
+                    <Layers size={48} />
+                    <p className="no-task-title">No tasks assigned yet</p>
+                    <p className="no-task-sub">Your nest is quiet</p>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="no-tasks-placeholder">
-                <Layers size={48} className="mb-4 opacity-50" />
-                <p>No tasks assigned yet.</p>
-              </div>
-            )
-          ) : (
-            <div className="tab-placeholder">
-              <p>Content for <strong>{activeTab}</strong> is under construction.</p>
-            </div>
+              )}
+            </>
           )}
         </div>
       </main>
