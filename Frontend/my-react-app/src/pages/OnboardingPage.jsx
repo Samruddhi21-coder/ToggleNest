@@ -1,19 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Briefcase, User, Rocket, CheckCircle, ArrowRight, Layers } from 'lucide-react';
+import { Briefcase, User, Rocket, CheckCircle, ArrowRight, Layers, Hash, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import toast, { Toaster } from 'react-hot-toast';
 import './Onboarding.css';
 import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
-
 
 const OnboardingPage = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [role, setRole] = useState(null); // 'Admin' or 'Member'
     const [userName, setUserName] = useState("");
+    const [userEmail, setUserEmail] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
 
-    
+    // Common Field
+    const [projectId, setProjectId] = useState('');
 
     // Admin Fields
     const [position, setPosition] = useState('');
@@ -25,31 +29,62 @@ const OnboardingPage = () => {
     const [jobFunction, setJobFunction] = useState('');
 
     useEffect(() => {
-        // Retrieve name from temp storage
-        const unsub = onAuthStateChanged(auth,(user)=>{
-            if (user){
+        // Retrieve name from auth
+        const unsub = onAuthStateChanged(auth, (user) => {
+            if (user) {
                 setUserName(user.displayName || "User");
+                setUserEmail(user.email);
             }
         });
-        return ()=>unsub();
+        return () => unsub();
     }, []);
 
     const handleRoleSelect = (selectedRole) => {
         setRole(selectedRole);
-        // Add a slight delay for visual confirmation before transition
         setTimeout(() => setStep(2), 200);
     };
 
-    const handleComplete = () => {
-        console.log('Onboarding Complete', {
+    const handleLaunch = async () => {
+        if (!projectId) {
+            toast.error("Please enter a Project ID.");
+            return;
+        }
+
+        setIsLoading(true);
+        const loadingToast = toast.loading("Validating Project ID...");
+
+        const onboardingData = {
+            email: userEmail,
             role,
-            position,
-            teamName,
-            teamSize,
-            projectName,
-            jobFunction
-        });
-        navigate('/Dashboard');
+            projectId, // Common field
+            position: role === 'Admin' ? position : undefined,
+            teamName: role === 'Admin' ? teamName : undefined,
+            teamSize: role === 'Admin' ? teamSize : undefined,
+            projectName: role === 'Member' ? projectName : undefined,
+            jobFunction: role === 'Member' ? jobFunction : undefined,
+        };
+
+        try {
+            const response = await axios.post('http://localhost:5000/api/onboarding', onboardingData);
+
+            if (response.status === 200) {
+                toast.success("Nest Found! Welcome aboard.", { id: loadingToast });
+
+                const updatedUser = response.data.user;
+                localStorage.setItem('user_metadata', JSON.stringify(updatedUser));
+
+                setTimeout(() => {
+                    navigate('/dashboard');
+                }, 800);
+            }
+        } catch (error) {
+            console.error("Onboarding Failed:", error);
+            // Show specific error message from backend
+            const errMsg = error.response?.data?.message || "Connection error: Nest not found";
+            toast.error(errMsg, { id: loadingToast });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     // Animation Variants
@@ -60,17 +95,14 @@ const OnboardingPage = () => {
 
     return (
         <div className="ob-page-wrapper">
+            <Toaster position="top-center" reverseOrder={false} />
             <div className="ob-container">
 
                 {/* Left Side: Interaction */}
                 <div className="ob-left">
-                    {/* Minimalist Step Indicator */}
                     <div className="ob-step-indicator">
                         {[1, 2, 3].map((s) => (
-                            <div
-                                key={s}
-                                className={`ob-step-dot ${step >= s ? 'active' : ''}`}
-                            />
+                            <div key={s} className={`ob-step-dot ${step >= s ? 'active' : ''}`} />
                         ))}
                     </div>
 
@@ -122,6 +154,7 @@ const OnboardingPage = () => {
                                     </div>
 
                                     <form className="ob-form" onSubmit={(e) => e.preventDefault()}>
+
                                         {/* ADMIN FLOW */}
                                         {role === 'Admin' && (
                                             <>
@@ -156,6 +189,21 @@ const OnboardingPage = () => {
                                                     </div>
                                                 </div>
 
+                                                {/* Project ID for Admin */}
+                                                <div>
+                                                    <label className="ob-label">Create Project ID</label>
+                                                    <div className="ob-input-group">
+                                                        <Hash className="ob-icon" size={18} />
+                                                        <input
+                                                            type="text"
+                                                            className="ob-input"
+                                                            placeholder="Create a unique Project ID for your team"
+                                                            value={projectId}
+                                                            onChange={(e) => setProjectId(e.target.value)}
+                                                        />
+                                                    </div>
+                                                </div>
+
                                                 <div>
                                                     <label className="ob-label">Team Size</label>
                                                     <div className="ob-pill-group">
@@ -176,6 +224,21 @@ const OnboardingPage = () => {
                                         {/* MEMBER FLOW */}
                                         {role === 'Member' && (
                                             <>
+                                                {/* Project ID for Member - Priority 1 */}
+                                                <div>
+                                                    <label className="ob-label">Enter Project ID</label>
+                                                    <div className="ob-input-group">
+                                                        <Lock className="ob-icon" size={18} />
+                                                        <input
+                                                            type="text"
+                                                            className="ob-input"
+                                                            placeholder="Enter the Project ID provided by your Admin"
+                                                            value={projectId}
+                                                            onChange={(e) => setProjectId(e.target.value)}
+                                                        />
+                                                    </div>
+                                                </div>
+
                                                 <div>
                                                     <label className="ob-label">Project Name</label>
                                                     <div className="ob-input-group">
@@ -183,7 +246,7 @@ const OnboardingPage = () => {
                                                         <input
                                                             type="text"
                                                             className="ob-input"
-                                                            placeholder="Project Name"
+                                                            placeholder="Project Name (Optional)"
                                                             value={projectName}
                                                             onChange={(e) => setProjectName(e.target.value)}
                                                         />
@@ -210,10 +273,11 @@ const OnboardingPage = () => {
                                             <button
                                                 type="button"
                                                 className="ob-btn-primary"
-                                                onClick={handleComplete}
+                                                onClick={handleLaunch}
+                                                disabled={isLoading}
                                             >
-                                                Launch Workspace
-                                                <ArrowRight size={18} />
+                                                {isLoading ? "Verifying..." : "Launch Workspace"}
+                                                {!isLoading && <ArrowRight size={18} />}
                                             </button>
 
                                             <button
@@ -233,8 +297,6 @@ const OnboardingPage = () => {
 
                 {/* Right Side: Identity & Ghost UI */}
                 <div className="ob-right">
-
-                    {/* Ghost Kanban Board Background */}
                     <div className="ob-ghost-board">
                         <div className="ob-ghost-column">
                             <div className="ob-ghost-col-header"></div>

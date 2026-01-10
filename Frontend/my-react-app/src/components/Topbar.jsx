@@ -19,4 +19,4 @@ const TopBar = ({ projectName }) => (
   </div>
 );
 
-export default TopBar;  // ✅ THIS WAS MISSING
+export default TopBar;  

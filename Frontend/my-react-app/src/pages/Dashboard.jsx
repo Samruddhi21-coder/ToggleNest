@@ -1,20 +1,29 @@
 import React, { useState } from 'react';
 import './Dashboard.css'; // Import the CSS file
 import {
-  Search,
+  Layers,
   Plus,
   Check,
   Briefcase,
   User,
   ArrowLeft,
   Clock,
-  MoreHorizontal
+  MoreHorizontal,
+  Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Dashboard = () => {
+  // Mock Auth State (Replace with real AuthContext later)
+  // Logic: If a user is logged in, pull their name from the auth state.
+  const user = {
+    name: "Sakshi",
+    isLoggedIn: true
+  };
+
   const [activeProject] = useState('Apex rebranding for Super Bowl');
   const [searchQuery, setSearchQuery] = useState("");
+  // Ensure "Task Board" is the default active tab
   const [activeTab, setActiveTab] = useState("Task Board");
 
   // Sidebar State
@@ -24,11 +33,19 @@ const Dashboard = () => {
   ]);
   const [newQuery, setNewQuery] = useState("");
 
+  // Role-Based Access Control (RBAC)
+  // Context: Team Member View.
+  // Action: REMOVED "User Roles" and "Project Creation".
+  // Correction: Rename "Task Assignment" to "Next Task Assigned".
   const tabs = [
-    "User Roles", "Project Creation", "Task Board",
-    "Task Assignment", "Progress Dashboard", "Activity Log", "Notifications"
+    "Task Board",
+    "Next Task Assigned",
+    "Progress Dashboard",
+    "Activity Log",
+    "Notifications"
   ];
 
+  // Interactive Tasks Logic
   const [tasks, setTasks] = useState([
     { id: 101, name: "Define Brand Voice", deadline: "Jan 12", status: "Done", completed: true },
     { id: 102, name: "Asset Creation Phase 1", deadline: "Jan 15", status: "In Progress", completed: false },
@@ -46,11 +63,13 @@ const Dashboard = () => {
   };
 
   const handleResolveQuery = (id) => {
-    setQueries(queries.map(q => q.id === id ? { ...q, solved: true } : q));
+    // If a query checkbox is clicked, apply the line-through CSS class (via solved state)
+    setQueries(queries.map(q => q.id === id ? { ...q, solved: !q.solved } : q));
   };
 
   // Dashboard Logic
   const toggleTaskCompletion = (id) => {
+    // Ensure clicking the checkbox toggles its status visually
     setTasks(tasks.map(t =>
       t.id === id ? { ...t, completed: !t.completed, status: !t.completed ? "Done" : "In Progress" } : t
     ));
@@ -65,9 +84,9 @@ const Dashboard = () => {
       {/* 2. LEFT SIDEBAR (THE ENGINE) */}
       <aside className="sidebar">
 
-        {/* Logo */}
+        {/* Logo Fix: Use Lucide Layers icon in Indigo + ToggleNest text */}
         <div className="logo-section">
-          <span className="logo-icon">⚡</span>
+          <Layers className="logo-icon" size={24} color="#000000" /> {/* Indigo-600 */}
           <span className="logo-text">ToggleNest</span>
         </div>
 
@@ -130,14 +149,14 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Query Box (New Feature) */}
+        {/* Query Box (Interactive) */}
         <div className="query-section">
           <span className="section-title">Tasks & Queries</span>
           <div className="query-input-wrapper">
             <input
               type="text"
               className="query-input"
-              placeholder="Type here..."
+              placeholder="Drop a Query..."
               value={newQuery}
               onChange={(e) => setNewQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddQuery()}
@@ -204,6 +223,13 @@ const Dashboard = () => {
               <Plus size={16} />
               Add Query
             </button>
+
+            {/* User Profile Avatar */}
+            {user.isLoggedIn && (
+              <div className="user-profile-badge">
+                {user.name.charAt(0)}
+              </div>
+            )}
           </div>
         </header>
 
