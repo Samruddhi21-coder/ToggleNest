@@ -56,7 +56,7 @@ const OnboardingPage = () => {
         const onboardingData = {
             email: userEmail,
             role,
-            projectId, // Common field
+            projectId: projectId.trim(), // Common field
             position: role === 'Admin' ? position : undefined,
             teamName: role === 'Admin' ? teamName : undefined,
             teamSize: role === 'Admin' ? teamSize : undefined,
@@ -65,12 +65,13 @@ const OnboardingPage = () => {
         };
 
         try {
-            const response = await axios.post('http://localhost:5000/api/onboarding', onboardingData);
+            const response = await axios.post('http://localhost:5000/api/onboarding', onboardingData); // Confirmed URL
 
             if (response.status === 200) {
                 toast.success("Nest Found! Welcome aboard.", { id: loadingToast });
 
                 const updatedUser = response.data.user;
+                localStorage.setItem('user', JSON.stringify(updatedUser)); // Save as 'user' for Dashboard
                 localStorage.setItem('user_metadata', JSON.stringify(updatedUser));
 
                 setTimeout(() => {

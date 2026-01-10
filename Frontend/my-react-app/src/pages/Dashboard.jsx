@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import './Dashboard.css'; // Import the CSS file
+import React, { useState, useEffect } from 'react';
+import './Dashboard.css';
+import axios from 'axios'; // Import the CSS file
 import {
   Layers,
   Plus,
@@ -9,7 +10,8 @@ import {
   ArrowLeft,
   Clock,
   MoreHorizontal,
-  Search
+  Search,
+  Axis3DIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from "react-router-dom";
@@ -18,28 +20,105 @@ import { getAuth, signOut } from "firebase/auth";
 
 const Dashboard = () => {
   const auth = getAuth();
-const navigate = useNavigate();
+  const navigate = useNavigate();
+  const [dashboardData, setDashboardData] = useState(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [teamMembers, setTeamMembers] = useState([]);
 
-const handleLogout = async () => {
-  try {
-    await signOut(auth);
-    navigate("/"); // landing page
-  } catch (error) {
-    console.error("Logout error:", error);
-  }
-};
+  // fetch memebers:
+  useEffect(() => {
+    const fetchMembers = async () => {
+      const storedUser = JSON.parse(localStorage.getItem('user'));
+      if (!storedUser || !storedUser.projectId) {
+        console.error("No Project ID found in localStorage");
+        return;
+      }
+      const validProjectId = storedUser.projectId.trim();
+
+      try {
+        const res = await axios.get(`http://localhost:5000/api/team/${validProjectId}`);
+        setTeamMembers(res.data.teamMembers || []);
+      }
+      catch (err) {
+        console.log("failed to fetch members", err)
+      }
+    }
+    fetchMembers();
+  }, [])
+
+  // Authentication & Data Fetching
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        setCurrentUser(user);
+        try {
+          const res = await fetch(`http://localhost:5000/api/dashboard/${user.email}`);
+          if (res.ok) {
+            const data = await res.json();
+            setDashboardData(data);
+            // Assuming tasks are part of dashboardData
+            setTasks(data.tasks || []);
+          } else {
+            console.error("Failed to fetch dashboard data:", res.status, res.statusText);
+            // Optionally set some default data or error state
+            setDashboardData({
+              activeProjectName: "Default Project",
+              teammates: [],
+              history: [],
+              tasks: []
+            });
+            setTasks([]);
+          }
+        } catch (error) {
+          console.error("Failed to fetch dashboard data:", error);
+          // Optionally set some default data or error state
+          setDashboardData({
+            activeProjectName: "Default Project",
+            teammates: [],
+            history: [],
+            tasks: []
+          });
+          setTasks([]);
+        }
+      } else {
+        navigate("/");
+      }
+    });
+
+    return () => unsubscribe();
+  }, [auth, navigate]);
+
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate("/"); // landing page
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
   const [showDropdown, setShowDropdown] = useState(false);
   // Mock Auth State (Replace with real AuthContext later)
   // Logic: If a user is logged in, pull their name from the auth state.
-  const user = {
-    name: "Sakshi",
-    isLoggedIn: true
-  };
+  // const user = {
+  //   name: "Sakshi",
+  //   isLoggedIn: true
+  // };
 
-  const [activeProject] = useState('Apex rebranding for Super Bowl');
+  // const [activeProject] = useState('Apex rebranding for Super Bowl');
   const [searchQuery, setSearchQuery] = useState("");
   // Ensure "Task Board" is the default active tab
   const [activeTab, setActiveTab] = useState("Task Board");
+
+  // Syncing Simulation
+  useEffect(() => {
+    if (activeTab === "Task Board" || activeTab === "Activity Log") {
+      setIsSyncing(true);
+      const timer = setTimeout(() => setIsSyncing(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab]);
 
   // Sidebar State
   const [queries, setQueries] = useState([
@@ -60,14 +139,8 @@ const handleLogout = async () => {
     "Notifications"
   ];
 
-  // Interactive Tasks Logic
-  const [tasks, setTasks] = useState([
-    { id: 101, name: "Define Brand Voice", deadline: "Jan 12", status: "Done", completed: true },
-    { id: 102, name: "Asset Creation Phase 1", deadline: "Jan 15", status: "In Progress", completed: false },
-    { id: 103, name: "Review with Stakeholders", deadline: "Jan 18", status: "To-Do", completed: false },
-    { id: 104, name: "Finalize Color Palette", deadline: "Jan 11", status: "Done", completed: true },
-    { id: 105, name: "Weekly Sync Prep", deadline: "Jan 20", status: "To-Do", completed: false },
-  ]);
+  // Empty Task State (No dummy rows)
+  const [tasks, setTasks] = useState([]);
 
   // Sidebar Logic
   const handleAddQuery = () => {
@@ -94,8 +167,23 @@ const handleLogout = async () => {
     t.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Helper for Initials
+  const getInitials = (name) => {
+    return name ? name.substring(0, 2).toUpperCase() : "??";
+  };
+
   return (
-    <div className="dashboard-container">
+    <div className="dashboard-container relative">
+      {/* Syncing Overlay */}
+      {isSyncing && (
+        <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="animate-pulse flex flex-col items-center">
+            <Layers className="animate-spin mb-2" size={32} color="#000" />
+            <span className="text-black font-medium">Syncing...</span>
+          </div>
+        </div>
+      )}
+
       {/* 2. LEFT SIDEBAR (THE ENGINE) */}
       <aside className="sidebar">
 
@@ -117,50 +205,58 @@ const handleLogout = async () => {
           />
         </div>
 
-        {/* Contacts */}
-        <div className="sidebar-section">
-          <span className="section-title">Team Contacts</span>
-          <div className="contacts-list">
-            <div className="contact-item">
-              <div className="avatar-circle">AS</div>
+        {/* {contact list} */}
+        <div className="team-contacts-section">
+          <h4 className="sidebar-heading">Team Contacts</h4>
+
+          {teamMembers.map((member) => (
+            <div key={member.email} className="contact-item">
+              {/* 1. Initial Circle */}
+              <div className="avatar-circle">
+                {member?.fullName?.charAt(0).toUpperCase()}
+              </div>
+
+              {/* 2. Name and Email Information */}
               <div className="contact-info">
-                <h4>Alice Smith</h4>
-                <p>alice@edu.global</p>
+                <p className="contact-name">
+                  {member.fullName}
+                  {member.email === currentUser?.email && <span className="me-badge"> (Me)</span>}
+                </p>
+                <p className="contact-email">{member.email}</p>
               </div>
             </div>
-            <div className="contact-item">
-              <div className="avatar-circle">JD</div>
-              <div className="contact-info">
-                <h4>John Doe</h4>
-                <p>john@edu.global</p>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
 
         {/* Projects */}
         <div className="sidebar-section">
           <span className="section-title">Projects</span>
           <div className="projects-menu">
+            {/* Active Project */}
             <div className="project-item active">
               <div className="project-left">
                 <Briefcase size={16} color="#000" />
-                <span className="project-name">Apex Rebrand</span>
+                <span className="project-name">
+                  {dashboardData?.activeProjectName || "Loading..."}
+                </span>
               </div>
               <div className="indicator"></div>
             </div>
-            <div className="project-item">
-              <div className="project-left">
-                <span style={{ fontSize: '12px', color: '#94A3B8', width: '16px', textAlign: 'center' }}>#</span>
-                <span className="project-name">Q1 Marketing</span>
-              </div>
-            </div>
-            <div className="project-item">
-              <div className="project-left">
-                <span style={{ fontSize: '12px', color: '#94A3B8', width: '16px', textAlign: 'center' }}>#</span>
-                <span className="project-name">Website Overhaul</span>
-              </div>
-            </div>
+
+            {/* History Projects */}
+            {dashboardData?.history?.length > 0 && (
+              <>
+                <span className="section-subtitle mt-4 mb-2 block text-[10px] text-gray-400 uppercase tracking-wider pl-4">Previous Projects</span>
+                {dashboardData.history.map((project) => (
+                  <div key={project.id} className="project-item">
+                    <div className="project-left">
+                      <span style={{ fontSize: '12px', color: '#94A3B8', width: '16px', textAlign: 'center' }}>#</span>
+                      <span className="project-name">{project.name}</span>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         </div>
 
@@ -211,6 +307,7 @@ const handleLogout = async () => {
         <div className="core-team-section">
           <span className="section-title">Core Team</span>
           <div className="team-avatars">
+            {/* Just a placeholder visualisation for "Core Team" as per original design */}
             {[1, 2, 3, 4].map(i => (
               <div key={i} className="team-avatar">
                 <User size={14} />
@@ -219,15 +316,15 @@ const handleLogout = async () => {
           </div>
         </div>
 
-      </aside>
+      </aside >
 
       {/* 3. MAIN CONTENT AREA (THE WORKSPACE) */}
-      <main className="main-content">
+      < main className="main-content" >
 
         {/* Header */}
-        <header className="main-header">
+        < header className="main-header" >
           <div className="project-title">
-            <h1>{activeProject}</h1>
+            <h1>{dashboardData?.activeProjectName || "Dashboard"}</h1>
           </div>
           <div className="header-actions">
             <button className="btn-back">
@@ -240,55 +337,57 @@ const handleLogout = async () => {
             </button>
 
             {/* User Profile Avatar */}
-            {user.isLoggedIn && (
-  <div className="relative">
-    <div
-      className="user-profile-badge"
-      onClick={() => setShowDropdown((prev) => !prev)}
-    >
-      {user.name.charAt(0)}
-    </div>
+            {currentUser && (
+              <div className="relative">
+                <div
+                  className="user-profile-badge"
+                  onClick={() => setShowDropdown((prev) => !prev)}
+                >
+                  {/* Avatar Logic: First letter of email or name if available */}
+                  {currentUser.email ? currentUser.email.charAt(0).toUpperCase() : "U"}
+                </div>
 
-    {showDropdown && (
-      <div className="profile-dropdown-container">
-        <button
-          className="profile-dropdown-item"
-          onClick={() => {
-            navigate("/profile");
-            setShowDropdown(false);
-          }}
-        >
-          View Profile
-        </button>
+                {showDropdown && (
+                  <div className="profile-dropdown-container">
+                    <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
+                      {currentUser.email}
+                    </div>
+                    <button
+                      className="profile-dropdown-item"
+                      onClick={() => {
+                        navigate("/profile");
+                        setShowDropdown(false);
+                      }}
+                    >
+                      View Profile
+                    </button>
 
-        <button
-          className="profile-dropdown-item"
-          onClick={() => {
-            navigate("/settings");
-            setShowDropdown(false);
-          }}
-        >
-          Settings
-        </button>
+                    <button
+                      className="profile-dropdown-item"
+                      onClick={() => {
+                        navigate("/settings");
+                        setShowDropdown(false);
+                      }}
+                    >
+                      Settings
+                    </button>
 
-        <button
-          className="profile-dropdown-item logout"
-          onClick={handleLogout}
-        >
-          Logout
-        </button>
-      </div>
-    )}
-  </div>
-)}
-
-
+                    <button
+                      className="profile-dropdown-item logout"
+                      onClick={handleLogout}
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
           </div>
-        </header>
+        </header >
 
         {/* Navigation Tabs */}
-        <div className="tabs-container">
+        < div className="tabs-container" >
           <div className="tabs-list">
             {tabs.map(tab => (
               <button
@@ -300,10 +399,10 @@ const handleLogout = async () => {
               </button>
             ))}
           </div>
-        </div>
+        </div >
 
         {/* Task Listing */}
-        <div className="dashboard-body">
+        < div className="dashboard-body" >
           {activeTab === "Task Board" ? (
             <>
               <div className="task-section-header">
@@ -314,6 +413,7 @@ const handleLogout = async () => {
               <div className="task-list">
                 {filteredTasks.length > 0 ? (
                   filteredTasks.map((task) => (
+                    // Logic for displaying tasks if they existed
                     <div key={task.id} className="task-card">
                       <div className="task-left">
                         <div
@@ -344,21 +444,26 @@ const handleLogout = async () => {
                     </div>
                   ))
                 ) : (
-                  <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>
-                    <p>No tasks match your search.</p>
+                  <div style={{ textAlign: 'center', padding: '60px', color: '#94A3B8' }}>
+                    <div className="flex justify-center mb-4 opacity-50">
+                      <Layers size={48} />
+                    </div>
+                    <p className="text-lg font-medium text-black">No tasks assigned yet.</p>
+                    <p className="text-sm">Your nest is quiet.</p>
                   </div>
                 )}
               </div>
             </>
           ) : (
+            // Activity Log or other tabs
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94A3B8' }}>
               <p>Content for <strong>{activeTab}</strong> under construction.</p>
             </div>
           )}
-        </div>
+        </div >
 
-      </main>
-    </div>
+      </main >
+    </div >
   );
 };
 
