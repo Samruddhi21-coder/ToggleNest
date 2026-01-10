@@ -10,6 +10,12 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './Auth.css';
+import { auth, googleProvider } from "../firebase";
+import {
+  signInWithEmailAndPassword,
+  signInWithPopup,
+} from "firebase/auth";
+
 
 const LoginPage = () => {
     const navigate = useNavigate();
@@ -18,19 +24,61 @@ const LoginPage = () => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
-    const handleSocialLogin = (provider) => {
-        console.log(`Logging in with ${provider}...`);
-    };
+    const handleSocialLogin = async (provider) => {
+    if (provider !== "Google") {
+        alert(`${provider} login coming soon`);
+        return;
+    }
 
-    const handleEmailLogin = (e) => {
-        e.preventDefault();
-        console.log('Logging in with Email:', { email, password });
+    try {
+        const result = await signInWithPopup(auth, googleProvider);
 
-        // Simulate backend auth
-        setTimeout(() => {
-            navigate('/Onboarding');
-        }, 800);
-    };
+        const token = await result.user.getIdToken();
+
+        // 🔗 Send token to backend (NON-BLOCKING)
+        fetch("http://localhost:5000/api/auth/verify", {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        }).catch((err) => {
+            console.error("Backend verify failed:", err);
+        });
+
+        // ✅ ALWAYS NAVIGATE
+        navigate("/onboarding");
+    } catch (error) {
+        alert(error.message);
+    }
+};
+
+
+const handleEmailLogin = async (e) => {
+    e.preventDefault();
+
+    try {
+        const userCredential = await signInWithEmailAndPassword(
+            auth,
+            email,
+            password
+        );
+
+        const token = await userCredential.user.getIdToken();
+
+        fetch("http://localhost:5000/api/auth/verify", {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        }).catch(() => {});
+
+        navigate("/onboarding");
+    } catch (error) {
+        alert(error.message);
+    }
+};
+
+
 
     return (
         <div className="auth-container">

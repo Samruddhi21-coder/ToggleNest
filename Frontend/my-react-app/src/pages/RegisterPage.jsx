@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import './Auth.css';
 import reg from "/image/reg.jpg"
+import { auth } from "../firebase";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 
 const RegisterPage = () => {
     const navigate = useNavigate();
@@ -19,20 +21,40 @@ const RegisterPage = () => {
     };
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
+    e.preventDefault();
 
-        // Mock API Call - replace with actual fetch to backend
-        console.log('Registering user:', formData);
+    try {
+        // 🔐 Create Firebase user
+        const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            formData.email,
+            formData.password
+        );
 
-        // Simulate backend delay and success
-        setTimeout(() => {
-            // Save basic info to localStorage to simulate "Auth"
-            localStorage.setItem('tn_user_temp', JSON.stringify(formData));
+        // 👤 Update display name
+        await updateProfile(userCredential.user, {
+            displayName: formData.name,
+        });
 
-            // Navigate to Onboarding
-            navigate('/onboarding');
-        }, 800);
-    };
+        // 🔑 Get Firebase ID token
+        const token = await userCredential.user.getIdToken();
+
+        // 🔗 Send token to backend (non-blocking)
+        fetch("http://localhost:5000/api/auth/verify", {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        }).catch(() => {});
+
+        // ✅ Navigate to onboarding
+        navigate("/onboarding");
+    } catch (error) {
+        alert(error.message);
+    }
+};
+
+
 
     return (
         <div className="auth-page">
