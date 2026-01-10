@@ -3,6 +3,7 @@ import { User, Mail, ShieldCheck, Lock, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import './Auth.css';
+import reg from "/image/reg.jpg"
 
 const RegisterPage = () => {
     const navigate = useNavigate();
@@ -116,7 +117,7 @@ const RegisterPage = () => {
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ delay: 0.2, duration: 0.6 }}
-                        src="https://i.pinimg.com/1200x/d9/b9/3a/d9b93a5412bf84956bb5ef04cd3d8c9d.jpg"
+                        src={reg}
                         alt="Team Collaboration"
                     />
                 </div>
