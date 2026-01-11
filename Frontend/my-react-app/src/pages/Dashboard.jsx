@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from "react";
+
+
+
 import "./Dashboard.css";
 import axios from "axios";
 import {
@@ -27,6 +30,7 @@ const [newTask, setNewTask] = useState({
   name: "",
   description: "",
   assignedTo: "",
+  deadline: "", // ✅ ADDED
 });
 
   const [loading, setLoading] = useState(true);
@@ -60,6 +64,7 @@ const handleCreateTask = () => {
     name: newTask.name,
     description: newTask.description,
     assignedTo: newTask.assignedTo,
+    deadline: newTask.deadline, // ✅ SAVED
     status: "To-Do",
     completed: false,
     deadline: "—",
@@ -314,9 +319,13 @@ const handleCreateTask = () => {
           </div>
 
           <div className="header-actions">
-            <button className="btn-back" onClick={() => navigate("/")}>
-              <ArrowLeft size={16} /> Back
-            </button>
+          <button
+  className="btn-back"
+  onClick={() => navigate("/onboarding", { replace: true })}
+>
+  <ArrowLeft size={16} /> Back
+</button>
+
 
             <button
              className="btn-add-query"
@@ -444,6 +453,16 @@ const handleCreateTask = () => {
           setNewTask({ ...newTask, assignedTo: e.target.value })
         }
       />
+
+
+            {/* ✅ DEADLINE INPUT */}
+            <input
+              type="date"
+              value={newTask.deadline}
+              onChange={(e) =>
+                setNewTask({ ...newTask, deadline: e.target.value })
+              }
+            />
 
       <div className="modal-actions">
         <button

@@ -11,14 +11,18 @@ export const DashboardProvider = ({ children }) => {
         {
           id: 101,
           name: "Define Brand Voice",
-          deadline: "Jan 12",
+          description: "Finalize tone & messaging",
+          assignedTo: "Sam",
+          deadline: "2026-01-12",
           status: "Done",
           completed: true,
         },
         {
           id: 102,
           name: "Asset Creation Phase 1",
-          deadline: "Jan 15",
+          description: "Initial creatives",
+          assignedTo: "Team",
+          deadline: "2026-01-15",
           status: "In Progress",
           completed: false,
         },
@@ -28,6 +32,7 @@ export const DashboardProvider = ({ children }) => {
 
   /* ================= ADMIN ACTIONS ================= */
 
+  // ➕ Add Project
   const addProject = (name) => {
     setProjects((prev) => [
       ...prev,
@@ -39,40 +44,61 @@ export const DashboardProvider = ({ children }) => {
     ]);
   };
 
+  // ➕ Add Task (WITH DEADLINE SUPPORT)
   const addTask = (projectId, task) => {
     setProjects((prev) =>
-      prev.map((p) =>
-        p.id === projectId
-          ? { ...p, tasks: [...p.tasks, task] }
-          : p
+      prev.map((project) =>
+        project.id === projectId
+          ? {
+              ...project,
+              tasks: [
+                ...project.tasks,
+                {
+                  id: task.id || Date.now(),
+                  name: task.name,
+                  description: task.description || "",
+                  assignedTo: task.assignedTo || "",
+                  deadline: task.deadline, // ✅ IMPORTANT
+                  status: task.status || "To-Do",
+                  completed: task.completed || false,
+                },
+              ],
+            }
+          : project
       )
     );
   };
 
+  // ✅ Toggle task status
   const toggleTask = (projectId, taskId) => {
     setProjects((prev) =>
-      prev.map((p) =>
-        p.id === projectId
+      prev.map((project) =>
+        project.id === projectId
           ? {
-              ...p,
-              tasks: p.tasks.map((t) =>
-                t.id === taskId
+              ...project,
+              tasks: project.tasks.map((task) =>
+                task.id === taskId
                   ? {
-                      ...t,
-                      completed: !t.completed,
-                      status: !t.completed ? "Done" : "In Progress",
+                      ...task,
+                      completed: !task.completed,
+                      status: !task.completed ? "Done" : "In Progress",
                     }
-                  : t
+                  : task
               ),
             }
-          : p
+          : project
       )
     );
   };
 
   return (
     <DashboardContext.Provider
-      value={{ projects, addProject, addTask, toggleTask }}
+      value={{
+        projects,
+        addProject,
+        addTask,
+        toggleTask,
+      }}
     >
       {children}
     </DashboardContext.Provider>

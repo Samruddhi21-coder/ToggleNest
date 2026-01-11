@@ -8,6 +8,7 @@ const AdminDashboard = () => {
 
   const [projectName, setProjectName] = useState("");
   const [taskName, setTaskName] = useState("");
+  const [deadline, setDeadline] = useState("");
   const [selectedProject, setSelectedProject] = useState(null);
 
   return (
@@ -19,19 +20,21 @@ const AdminDashboard = () => {
           <span className="logo-text">ToggleNest Admin</span>
         </div>
 
-        {/* ADD PROJECT */}
+        {/* CREATE PROJECT */}
         <div className="sidebar-section">
           <span className="section-title">Create Project</span>
+
           <input
             className="query-input"
             placeholder="Project name"
             value={projectName}
             onChange={(e) => setProjectName(e.target.value)}
           />
+
           <button
             className="btn-add-query"
             onClick={() => {
-              if (!projectName) return;
+              if (!projectName.trim()) return;
               addProject(projectName);
               setProjectName("");
             }}
@@ -43,6 +46,7 @@ const AdminDashboard = () => {
         {/* PROJECT LIST */}
         <div className="sidebar-section">
           <span className="section-title">Projects</span>
+
           {projects.map((p) => (
             <div
               key={p.id}
@@ -63,11 +67,12 @@ const AdminDashboard = () => {
           <>
             <h1>{selectedProject.name}</h1>
 
-            {/* ADD TASK */}
+            {/* ADD TASK SECTION */}
             <div className="task-section-header">
               <h2>Add Task</h2>
             </div>
 
+            {/* TASK NAME */}
             <input
               className="query-input"
               placeholder="Task name"
@@ -75,18 +80,30 @@ const AdminDashboard = () => {
               onChange={(e) => setTaskName(e.target.value)}
             />
 
+            {/* DEADLINE */}
+            <input
+              type="date"
+              className="query-input"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+            />
+
+            {/* ADD TASK BUTTON */}
             <button
               className="btn-add-query"
               onClick={() => {
-                if (!taskName) return;
+                if (!taskName || !deadline) return;
+
                 addTask(selectedProject.id, {
                   id: Date.now(),
                   name: taskName,
-                  deadline: "Jan 30",
+                  deadline: deadline,
                   status: "To-Do",
                   completed: false,
                 });
+
                 setTaskName("");
+                setDeadline("");
               }}
             >
               <Plus size={16} /> Add Task
@@ -94,12 +111,26 @@ const AdminDashboard = () => {
 
             {/* TASK LIST */}
             <div className="task-list">
-              {selectedProject.tasks.map((t) => (
-                <div key={t.id} className="task-card">
-                  <span>{t.name}</span>
-                  <span className="status-badge todo">{t.status}</span>
-                </div>
-              ))}
+              {selectedProject.tasks.length > 0 ? (
+                selectedProject.tasks.map((t) => (
+                  <div key={t.id} className="task-card">
+                    <div>
+                      <span className="task-name">{t.name}</span>
+                      <p className="task-deadline">
+                        Deadline: {t.deadline}
+                      </p>
+                    </div>
+
+                    <span className="status-badge todo">
+                      {t.status}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p style={{ color: "#94A3B8" }}>
+                  No tasks added yet
+                </p>
+              )}
             </div>
           </>
         ) : (
