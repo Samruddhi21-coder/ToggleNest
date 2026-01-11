@@ -1,7 +1,4 @@
 import React, { useEffect, useState } from "react";
-
-
-
 import "./Dashboard.css";
 import axios from "axios";
 import {
@@ -60,15 +57,15 @@ const handleCreateTask = () => {
   if (!newTask.name || !newTask.assignedTo) return;
 
   const task = {
-    id: Date.now(),
-    name: newTask.name,
-    description: newTask.description,
-    assignedTo: newTask.assignedTo,
-    deadline: newTask.deadline, // ✅ SAVED
-    status: "To-Do",
-    completed: false,
-    deadline: "—",
-  };
+  id: Date.now(),
+  name: newTask.name,
+  description: newTask.description,
+  assignedTo: newTask.assignedTo,
+  deadline: newTask.deadline || "—",
+  status: "To-Do",
+  completed: false,
+};
+
 
   setTasks((prev) => [task, ...prev]);
 
@@ -81,9 +78,11 @@ const handleCreateTask = () => {
     useEffect(() => {
   const unsub = onAuthStateChanged(auth, async (user) => {
     if (!user) {
-      navigate("/");
-      return;
-    }
+  setLoading(false);
+  navigate("/");
+  return;
+}
+
 
     setCurrentUser(user);
 
@@ -235,9 +234,10 @@ const handleCreateTask = () => {
               <div className="contact-info">
                 <h4>
                   {m.fullName}
-                  {m.email === currentUser.email && (
-                    <span className="me-badge"> (Me)</span>
-                  )}
+                  {currentUser && m.email === currentUser.email && (
+  <span className="me-badge"> (Me)</span>
+)}
+
                 </h4>
                 <p>{m.email}</p>
               </div>
@@ -338,7 +338,8 @@ const handleCreateTask = () => {
                 className="user-profile-badge"
                 onClick={() => setShowDropdown(!showDropdown)}
               >
-                {currentUser.email.charAt(0).toUpperCase()}
+                {currentUser?.email?.charAt(0).toUpperCase()}
+
               </div>
 
               {showDropdown && (

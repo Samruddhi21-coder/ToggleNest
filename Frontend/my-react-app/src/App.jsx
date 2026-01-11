@@ -12,52 +12,80 @@ import ViewProfile from "./pages/Profile";
 export default function App() {
   const { user, userData, loading } = useAuth();
 
-  if (loading) return null; // or loader
+  if (loading) {
+  return <div style={{ color: "white", padding: 20 }}>Loading...</div>;
+}
 
-  const redirectPath = user
-    ? userData?.onboardingCompleted
-      ? "/dashboard"
-      : "/onboarding"
-    : "/";
+
+  // 🔀 SMART REDIRECT BASED ON ROLE
+  const getDashboardRoute = () => {
+    if (!user) return "/";
+    if (!userData?.onboardingCompleted) return "/onboarding";
+    return userData?.role === "Admin"
+      ? "/admin_dashboard"
+      : "/dashboard";
+  };
 
   return (
     <Routes>
-      {/* Public */}
+      {/* 🌐 Public Routes */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
-      {/* Smart redirect */}
-      <Route path="/home" element={<Navigate to={redirectPath} replace />} />
+      {/* 🧠 Smart Home Redirect */}
+      <Route
+        path="/home"
+        element={<Navigate to={getDashboardRoute()} replace />}
+      />
 
-      {/* Protected */}
+      {/* 🧩 Onboarding */}
       <Route
         path="/onboarding"
         element={
           user && !userData?.onboardingCompleted ? (
             <OnboardingPage />
           ) : (
-            <Navigate to="/dashboard" replace />
+            <Navigate to={getDashboardRoute()} replace />
           )
         }
       />
 
+      {/* 👤 Member Dashboard */}
       <Route
         path="/dashboard"
         element={
-          user && userData?.onboardingCompleted ? (
+          user &&
+          userData?.onboardingCompleted &&
+          userData?.role === "Member" ? (
             <Dashboard />
           ) : (
-            <Navigate to="/onboarding" replace />
+            <Navigate to={getDashboardRoute()} replace />
           )
         }
       />
 
+      {/* 🛠️ Admin Dashboard */}
+      <Route
+        path="/admin_dashboard"
+        element={
+          user &&
+          userData?.onboardingCompleted &&
+          userData?.role === "Admin" ? (
+            <AdminDashboard />
+          ) : (
+            <Navigate to={getDashboardRoute()} replace />
+          )
+        }
+      />
+
+      {/* 👤 Profile */}
       <Route
         path="/profile"
         element={user ? <ViewProfile /> : <Navigate to="/" replace />}
       />
 
+      {/* ❌ Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

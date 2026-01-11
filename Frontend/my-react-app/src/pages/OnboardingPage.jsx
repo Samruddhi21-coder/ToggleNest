@@ -9,6 +9,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { doc, updateDoc } from "firebase/firestore"; // Import Firestore functions
 import { auth, db } from "../firebase"; // Import db
 
+
 const OnboardingPage = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
@@ -70,27 +71,31 @@ const OnboardingPage = () => {
             const response = await axios.post('http://localhost:5000/api/onboarding', onboardingData);
 
             if (response.status === 200) {
-                toast.success("Nest Found! Welcome aboard.", { id: loadingToast });
+    toast.success("Nest Found! Welcome aboard.", { id: loadingToast });
 
-                const updatedUser = response.data.user;
-                localStorage.setItem('user', JSON.stringify(updatedUser)); // Save as 'user' for Dashboard
-                localStorage.setItem('user_metadata', JSON.stringify(updatedUser));
+    const updatedUser = response.data.user;
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    localStorage.setItem('user_metadata', JSON.stringify(updatedUser));
 
-                // SYNC WITH FIRESTORE (Required for App.jsx Routing)
-                if (auth.currentUser) {
-                    try {
-                        const userRef = doc(db, "users", auth.currentUser.uid);
-                        await updateDoc(userRef, { onboardingCompleted: true });
-                    } catch (fsError) {
-                        console.error("Firestore Sync Error:", fsError);
-                        // Continue anyway since backend succeeded
-                    }
-                }
+    if (auth.currentUser) {
+        try {
+            const userRef = doc(db, "users", auth.currentUser.uid);
+            await updateDoc(userRef, { onboardingCompleted: true, role });
+        } catch (fsError) {
+            console.error("Firestore Sync Error:", fsError);
+        }
+    }
 
                 setTimeout(() => {
-                    navigate('/dashboard');
-                    window.location.reload(); // Force reload to update AuthContext
-                }, 800);
+    if (role === "Admin") {
+        navigate("/admin_dashboard");
+    } else {
+        navigate("/dashboard");
+    }
+
+    window.location.reload(); // keep this for AuthContext sync
+}, 800);
+
             }
         } catch (error) {
             console.error("Onboarding Failed:", error);
